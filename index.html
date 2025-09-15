@@ -12,6 +12,7 @@
   h1{margin:0;font-size:18px}
   .btn{height:36px;border-radius:10px;border:1px solid #243042;background:#0b1016;color:#fff;padding:0 12px;cursor:pointer}
   .btn.warn{background:#2a1515;border-color:#3a2222;color:#ffb4b4}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
   /* Tabs */
   .tabs{display:flex;gap:6px;overflow:auto;padding:8px 12px;background:#0e131a;border-bottom:1px solid #222833}
   .tab{padding:6px 12px;border-radius:999px;border:1px solid #243042;background:#0b1016;color:var(--text);cursor:pointer;white-space:nowrap;font-size:14px}
@@ -30,6 +31,14 @@
   #details{margin-top:8px;border-top:1px dashed #243042;padding-top:8px}
   .line{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;padding:6px 0}
   .remove{border:1px solid #3a2222;background:#2a1515;color:#ffb4b4;border-radius:8px;height:28px;padding:0 8px;cursor:pointer}
+  /* Paiement */
+  .paywrap{display:grid;grid-template-columns:1fr;gap:10px;padding:12px}
+  .paycard{background:#0e131a;border:1px solid #222833;border-radius:12px;padding:12px}
+  .payrow{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}
+  input.payin{width:100%;height:40px;border-radius:10px;border:1px solid #243042;background:#0b1016;color:#fff;padding:0 10px;font-size:16px}
+  .quickcash{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{border:1px solid #243042;padding:4px 8px;border-radius:999px;font-size:12px}
+  .denoms{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 </style>
 </head>
 <body>
@@ -41,8 +50,10 @@
   <!-- Onglets -->
   <div class="tabs" id="tabs"></div>
 
-  <!-- Zone produits -->
-  <div class="grid" id="grid"></div>
+  <!-- Zone produits OU paiement -->
+  <div id="contentArea">
+    <div class="grid" id="grid"></div>
+  </div>
 
   <!-- Totaux + détail -->
   <div class="panel" id="totalsPanel">
@@ -65,7 +76,7 @@ const fmt = new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR'});
 const toC = v => Math.round(parseFloat(String(v).replace(',','.'))*100);
 const fromC = c => fmt.format(c/100);
 
-/* ====== Données : catégories + produits (depuis ta photo) ====== */
+/* ====== Données : catégories + produits ====== */
 const categories = {
   "☕ Chauds": [
     {id:"cafe",name:"Café",price:0.50,emo:"☕"},
@@ -90,8 +101,8 @@ const categories = {
     {id:"1664-btl",name:"1664",price:1.00,emo:"🍺"},
     {id:"leffe-btl",name:"Leffe",price:1.50,emo:"🍺"},
     {id:"desperados-btl",name:"Despe",price:1.50,emo:"🍺"},
-     {id:"tourtel",name:"Tourtel Twist",price:1.00,emo:"🍺"},
-    ],
+    {id:"tourtel",name:"Tourtel Twist",price:1.00,emo:"🍺"}
+  ],
   "🍷 Vins": [
     {id:"rose-verre",name:"Vin rosé (verre)",price:0.60,emo:"🍷"},
     {id:"blanc-verre",name:"Vin blanc (verre)",price:0.90,emo:"🥂"},
@@ -151,6 +162,7 @@ Object.values(categories).flat().forEach(p=>counters[p.id]=0);
 /* ====== Éléments ====== */
 const $tabs=document.getElementById('tabs');
 const $grid=document.getElementById('grid');
+const $content=document.getElementById('contentArea');
 const $totalTxt=document.getElementById('totalTxt');
 const $countTxt=document.getElementById('countTxt');
 const $details=document.getElementById('details');
@@ -158,31 +170,97 @@ const $totalsPanel=document.getElementById('totalsPanel');
 const $chev=document.getElementById('chev');
 const $clear=document.getElementById('clear');
 
+/* Onglet paiement (virtuel) */
+const PAY_TAB = "💶 Paiement";
+
 let activeCat = Object.keys(categories)[0];
 
-/* ====== Rendu onglets ====== */
+/* ====== Rendu onglets (catégories + paiement) ====== */
 function renderTabs(){
   $tabs.innerHTML="";
-  Object.keys(categories).forEach(cat=>{
+  const allTabs = [...Object.keys(categories), PAY_TAB];
+  allTabs.forEach(cat=>{
     const b=document.createElement('button');
     b.className='tab'+(cat===activeCat?' active':'');
     b.textContent=cat;
-    b.onclick=()=>{activeCat=cat;renderTabs();renderGrid();};
+    b.onclick=()=>{activeCat=cat;renderTabs();renderContent();};
     $tabs.appendChild(b);
   });
 }
 
-/* ====== Rendu produits de l’onglet ====== */
-function renderGrid(){
-  $grid.innerHTML="";
-  categories[activeCat].forEach(p=>{
-    const btn=document.createElement('button');
-    btn.type='button'; btn.className='item'; btn.dataset.id=p.id;
-    btn.innerHTML=`<span class="badge">0</span><span class="emo">${p.emo}</span>${p.name}<br>${fromC(toC(p.price))}`;
-    btn.onclick=()=>{ counters[p.id]++; updateTotals(); };
-    $grid.appendChild(btn);
+/* ====== Rendu contenu selon onglet ====== */
+function renderContent(){
+  if(activeCat===PAY_TAB){
+    // Afficher l'interface de paiement
+    $content.innerHTML = `
+      <div class="paywrap">
+        <div class="paycard">
+          <div style="margin-bottom:6px"><strong>Montant donné (€)</strong></div>
+          <div class="payrow">
+            <input class="payin" id="cashGiven" placeholder="0,00" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*">
+            <button class="btn primary" id="calcChange">Calculer</button>
+          </div>
+          <div class="quickcash" id="quickCash" style="margin-top:8px"></div>
+        </div>
+        <div class="paycard" id="changeBox" hidden>
+          <div><strong>Rendu de monnaie :</strong> <span id="changeTxt">0,00 €</span></div>
+          <div class="denoms" id="denomsBox"></div>
+        </div>
+      </div>
+    `;
+    setupPaymentHandlers();
+  } else {
+    // Afficher la grille produits de la catégorie
+    $content.innerHTML = `<div class="grid" id="grid"></div>`;
+    const grid = document.getElementById('grid');
+    grid.innerHTML="";
+    categories[activeCat].forEach(p=>{
+      const btn=document.createElement('button');
+      btn.type='button'; btn.className='item'; btn.dataset.id=p.id;
+      btn.innerHTML=`<span class="badge">0</span><span class="emo">${p.emo}</span>${p.name}<br>${fromC(toC(p.price))}`;
+      btn.onclick=()=>{ counters[p.id]++; updateTotals(); };
+      grid.appendChild(btn);
+    });
+    updateTotals();
+  }
+}
+
+/* ====== Paiement : handlers ====== */
+function setupPaymentHandlers(){
+  const $cashGiven = document.getElementById('cashGiven');
+  const $quickCash = document.getElementById('quickCash');
+  const $changeBox = document.getElementById('changeBox');
+  const $changeTxt = document.getElementById('changeTxt');
+  const $denomsBox = document.getElementById('denomsBox');
+
+  // Boutons rapides
+  const QUICK = [0.5,1,2,5,10,20,50];
+  $quickCash.innerHTML = QUICK.map(v=>`<button class="btn" data-v="${v}">+${String(v).replace('.',',')}€</button>`).join('');
+  $quickCash.addEventListener('click',(e)=>{
+    const b=e.target.closest('button'); if(!b) return;
+    const cur = parseFloat(($cashGiven.value||'0').replace(',','.')) || 0;
+    const nv = Math.round((cur + parseFloat(b.dataset.v))*100)/100;
+    $cashGiven.value = String(nv).replace('.',',');
   });
-  updateTotals();
+
+  // Calcul rendu
+  document.getElementById('calcChange').addEventListener('click', ()=>{
+    // total courant en centimes
+    let total=0; Object.values(categories).flat().forEach(p=> total += toC(p.price)*(counters[p.id]||0));
+    const given = toC(($cashGiven.value || '0').replace(/\s/g,''));
+    const change = given - total;
+    $changeBox.hidden = false;
+    if(change < 0){
+      $changeTxt.textContent = `Montant insuffisant (manque ${fromC(-change)})`;
+      $denomsBox.innerHTML = '';
+      return;
+    }
+    $changeTxt.textContent = fromC(change);
+    const denoms = [20000,10000,5000,2000,1000,500,200,100,50,20,10,5]; // 200 € → 0,05 €
+    let rest = change; const chips=[];
+    for(const d of denoms){ const n=Math.floor(rest/d); if(n>0){ chips.push(`${n} × ${fromC(d)}`); rest-=n*d; } }
+    $denomsBox.innerHTML = chips.map(c=>`<span class="chip">${c}</span>`).join('');
+  });
 }
 
 /* ====== Mise à jour totaux + badges + détail ====== */
@@ -190,7 +268,8 @@ function updateTotals(){
   let total=0,count=0;
   Object.values(categories).flat().forEach(p=>{
     const q=counters[p.id]; total+=toC(p.price)*q; count+=q;
-    const badge=$grid.querySelector(`[data-id="${p.id}"] .badge`);
+    // mettre à jour badge si la grille courante contient le produit
+    const badge = document.querySelector(`[data-id="${p.id}"] .badge`);
     if(badge){ badge.textContent=q; badge.style.display=q>0?'inline-block':'none'; }
   });
   $totalTxt.textContent=fromC(total);
@@ -239,7 +318,7 @@ $clear.addEventListener('click', ()=>{
 });
 
 /* ====== Init ====== */
-renderTabs(); renderGrid();
+renderTabs(); renderContent();
 </script>
 </body>
 </html>
