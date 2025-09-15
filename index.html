@@ -3,13 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Caisse rapide – Prototype onglets</title>
+<title>Caisse – Bar (onglets + détail)</title>
 <style>
-  :root{--bg:#0f1217;--panel:#171b22;--text:#e6e9ef;--muted:#9aa3b2;--accent:#3b82f6}
+  :root{--bg:#0f1217;--panel:#171b22;--text:#e6e9ef;--muted:#9aa3b2;--accent:#3b82f6;--warn:#ef4444}
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
-  header{padding:12px;background:var(--panel)}
+  header{padding:12px;background:var(--panel);display:flex;justify-content:space-between;align-items:center}
   h1{margin:0;font-size:18px}
+  .btn{height:36px;border-radius:10px;border:1px solid #243042;background:#0b1016;color:#fff;padding:0 12px;cursor:pointer}
+  .btn.warn{background:#2a1515;border-color:#3a2222;color:#ffb4b4}
   /* Tabs */
   .tabs{display:flex;gap:6px;overflow:auto;padding:8px 12px;background:#0e131a;border-bottom:1px solid #222833}
   .tab{padding:6px 12px;border-radius:999px;border:1px solid #243042;background:#0b1016;color:var(--text);cursor:pointer;white-space:nowrap;font-size:14px}
@@ -19,9 +21,9 @@
   .item{appearance:none;-webkit-appearance:none;border:1px solid #222833;background:#0e131a;color:inherit;border-radius:12px;padding:10px;cursor:pointer;position:relative;text-align:center}
   .item .emo{display:block;font-size:24px;margin-bottom:4px}
   .item .badge{position:absolute;top:6px;right:6px;background:var(--accent);color:#fff;border-radius:999px;padding:2px 6px;font-size:12px;display:none}
-  /* Totaux */
+  /* Totaux + détail */
   .panel{background:var(--panel);margin:12px;border-radius:12px;padding:12px}
-  .row{display:flex;justify-content:space-between;align-items:center}
+  .row{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
   .big{font-size:26px;font-weight:800}
   .muted{color:var(--muted);font-size:12px}
   .chev{font-size:16px;color:var(--muted)}
@@ -31,7 +33,10 @@
 </style>
 </head>
 <body>
-  <header><h1>🍹 Caisse rapide – Démo</h1></header>
+  <header>
+    <h1>🍹 Caisse – Bar</h1>
+    <button class="btn warn" id="clear">Vider la commande</button>
+  </header>
 
   <!-- Onglets -->
   <div class="tabs" id="tabs"></div>
@@ -39,7 +44,7 @@
   <!-- Zone produits -->
   <div class="grid" id="grid"></div>
 
-  <!-- Totaux -->
+  <!-- Totaux + détail -->
   <div class="panel" id="totalsPanel">
     <div class="row">
       <div>
@@ -55,111 +60,188 @@
   </div>
 
 <script>
+/* ====== Format monétaire (centimes) ====== */
 const fmt = new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR'});
-const toCents = v => Math.round(parseFloat(String(v).replace(',','.'))*100);
-const fromCents = c => fmt.format(c/100);
+const toC = v => Math.round(parseFloat(String(v).replace(',','.'))*100);
+const fromC = c => fmt.format(c/100);
 
-// Catégories avec quelques produits de test
+/* ====== Données : catégories + produits (depuis ta photo) ====== */
 const categories = {
-  "☕ Chauds":[
-    {id:"cafe",name:"Café",price:0.5,emo:"☕"},
-    {id:"choco",name:"Chocolat chaud",price:0.5,emo:"🍫"}
+  "☕ Chauds": [
+    {id:"cafe",name:"Café",price:0.50,emo:"☕"},
+    {id:"infusion",name:"Infusion",price:0.20,emo:"🍵"},
+    {id:"choco",name:"Chocolat chaud",price:0.50,emo:"🍫"}
   ],
-  "🍬 Confiserie":[
-    {id:"kitkat",name:"KitKat",price:0.5,emo:"🍫"},
-    {id:"cotedor",name:"Côte d'Or",price:1.0,emo:"🍫"}
+  "🥤 Fraîches": [
+    {id:"boitage",name:"Boitage (canettes)",price:0.80,emo:"🥤"},
+    {id:"jus",name:"Jus de fruits",price:0.90,emo:"🧃"},
+    {id:"eau-plate",name:"Eau plate",price:0.30,emo:"💧"},
+    {id:"eau-gaz",name:"Eau gazeuse",price:0.70,emo:"💦"},
+    {id:"limonade-verre",name:"Limonade (verre)",price:0.20,emo:"🥤"},
+    {id:"limonade-btl",name:"Limonade (bouteille)",price:1.20,emo:"🫙"}
   ],
-  "🥤 Fraîches":[
-    {id:"canette",name:"Canette",price:0.8,emo:"🥤"},
-    {id:"jus",name:"Jus de fruits",price:0.9,emo:"🧃"}
+  "🍺 Bières": [
+    {id:"biere-spe",name:"Bières spéciales",price:2.00,emo:"🍻"},
+    {id:"pelforth-pression",name:"Pelforth pression",price:1.00,emo:"🍺"},
+    {id:"lindemans-pression",name:"Lindemans pression",price:1.50,emo:"🍺"},
+    {id:"hoegaarden-btl",name:"Hoegaarden btl",price:1.00,emo:"🍺"},
+    {id:"grimbergen-btl",name:"Grimbergen btl",price:1.00,emo:"🍺"},
+    {id:"heineken-btl",name:"Heineken btl",price:1.00,emo:"🍺"},
+    {id:"1664-btl",name:"1664 btl",price:1.00,emo:"🍺"},
+    {id:"leffe-btl",name:"Leffe btl",price:1.50,emo:"🍺"},
+    {id:"desperados-btl",name:"Desperados btl",price:1.50,emo:"🍺"},
+    {id:"blonde-pression",name:"Blonde pression",price:1.00,emo:"🍺"},
+    {id:"rouge-pression",name:"Rouge pression",price:1.50,emo:"🍺"}
   ],
-  "🍺 Bières":[
-    {id:"pression",name:"Pelforth Pression",price:1.0,emo:"🍺"},
-    {id:"despe",name:"Desperados",price:1.5,emo:"🍻"}
+  "🍷 Vins": [
+    {id:"rose-verre",name:"Vin rosé (verre)",price:0.60,emo:"🍷"},
+    {id:"blanc-verre",name:"Vin blanc (verre)",price:0.90,emo:"🥂"},
+    {id:"rose-btl",name:"Vin rosé (btl)",price:4.50,emo:"🍷"},
+    {id:"blanc-btl",name:"Vin blanc (btl)",price:6.75,emo:"🥂"},
+    {id:"crs-or",name:"Vin CRS 08 Or",price:6.00,emo:"🍾"},
+    {id:"crs-rouge",name:"Vin CRS 08 Rouge",price:8.00,emo:"🍾"},
+    {id:"beaujolais",name:"Beaujolais",price:4.50,emo:"🍷"},
+    {id:"champagne",name:"Champagne",price:18.00,emo:"🍾"}
   ],
-  "🍷 Vins":[
-    {id:"rose",name:"Rosé verre",price:0.6,emo:"🍷"},
-    {id:"blanc",name:"Blanc verre",price:0.9,emo:"🥂"}
+  "🍬 Confiserie": [
+    {id:"cotedor",name:"Côte d'Or",price:1.00,emo:"🍫"},
+    {id:"kitkat",name:"KitKat",price:0.50,emo:"🍫"},
+    {id:"bounty",name:"Bounty",price:0.50,emo:"🥥"},
+    {id:"mars",name:"Mars",price:0.50,emo:"🍫"},
+    {id:"snickers",name:"Snickers",price:0.50,emo:"🍫"},
+    {id:"lion",name:"Lion",price:0.50,emo:"🍫"},
+    {id:"bueno",name:"Kinder Bueno",price:0.70,emo:"🍫"},
+    {id:"suchard",name:"Rocher Suchard",price:0.70,emo:"🍫"}
+  ],
+  "🚬 Cigarettes": [
+    {id:"marlboro-red",name:"Marlboro Red",price:13.50,emo:"🚬"},
+    {id:"marlboro-gold",name:"Marlboro Gold",price:13.50,emo:"🚬"},
+    {id:"philip-morris",name:"Philip Morris",price:12.00,emo:"🚬"}
+  ],
+  "🥨 Snacks": [
+    {id:"tortel",name:"Tortel Twist",price:1.00,emo:"🥨"},
+    {id:"gateau-ap",name:"Gâteau apéritif",price:1.30,emo:"🥨"},
+    {id:"saucisson",name:"Saucisson",price:4.00,emo:"🥓"},
+    {id:"fuet",name:"Fuet / barquette",price:3.00,emo:"🥓"}
+  ],
+  "🧺 Divers": [
+    {id:"dose-lessive",name:"Dose lessive",price:0.60,emo:"🧼"},
+    {id:"jeton-machine",name:"Jeton machine",price:1.60,emo:"🪙"},
+    {id:"papier-toilette",name:"Papier toilette",price:0.40,emo:"🧻"},
+    {id:"mousse-raser",name:"Mousse à raser",price:2.00,emo:"🪒"}
+  ],
+  "👕 Utilitaire CRS": [
+    {id:"calot",name:"Calot",price:26.00,emo:"🎓"},
+    {id:"flamme-calot",name:"Flamme de calot",price:3.50,emo:"🔥"},
+    {id:"galon-poitrine",name:"Galon poitrine",price:3.20,emo:"🎖️"},
+    {id:"manchon",name:"Manchon",price:7.00,emo:"🧤"},
+    {id:"galon-calot-gd",name:"Galon calot GD",price:3.00,emo:"🎖️"},
+    {id:"tee-crs",name:"Tee-shirt CRS",price:8.10,emo:"👕"},
+    {id:"tee-crs8-brode",name:"Tee-shirt CRS8 brodé",price:11.00,emo:"👕"},
+    {id:"polo-crs",name:"Polo CRS",price:20.00,emo:"👕"},
+    {id:"pucelle",name:"Pucelle",price:7.00,emo:"🎖️"},
+    {id:"medaille",name:"Médaille CRS",price:20.00,emo:"🏅"},
+    {id:"temoin",name:"Témoin chambre vide",price:3.00,emo:"🪪"},
+    {id:"pince-cravate",name:"Pince cravate",price:8.00,emo:"👔"}
   ]
 };
 
-let counters = {}; // id → quantité
+/* ====== État : compteurs par produit ====== */
+const counters = {};
 Object.values(categories).flat().forEach(p=>counters[p.id]=0);
+
+/* ====== Éléments ====== */
+const $tabs=document.getElementById('tabs');
+const $grid=document.getElementById('grid');
+const $totalTxt=document.getElementById('totalTxt');
+const $countTxt=document.getElementById('countTxt');
+const $details=document.getElementById('details');
+const $totalsPanel=document.getElementById('totalsPanel');
+const $chev=document.getElementById('chev');
+const $clear=document.getElementById('clear');
 
 let activeCat = Object.keys(categories)[0];
 
-// Elements
-const $tabs=document.getElementById("tabs");
-const $grid=document.getElementById("grid");
-const $totalTxt=document.getElementById("totalTxt");
-const $countTxt=document.getElementById("countTxt");
-const $details=document.getElementById("details");
-const $totalsPanel=document.getElementById("totalsPanel");
-const $chev=document.getElementById("chev");
-
+/* ====== Rendu onglets ====== */
 function renderTabs(){
   $tabs.innerHTML="";
   Object.keys(categories).forEach(cat=>{
-    const b=document.createElement("button");
-    b.className="tab"+(cat===activeCat?" active":"");
+    const b=document.createElement('button');
+    b.className='tab'+(cat===activeCat?' active':'');
     b.textContent=cat;
-    b.addEventListener("click",()=>{activeCat=cat;renderTabs();renderGrid();});
+    b.onclick=()=>{activeCat=cat;renderTabs();renderGrid();};
     $tabs.appendChild(b);
   });
 }
+
+/* ====== Rendu produits de l’onglet ====== */
 function renderGrid(){
   $grid.innerHTML="";
   categories[activeCat].forEach(p=>{
-    const btn=document.createElement("button");
-    btn.type="button";btn.className="item";btn.dataset.id=p.id;btn.dataset.price=p.price;btn.dataset.name=p.name;
-    btn.innerHTML=`<span class="badge">0</span><span class="emo">${p.emo}</span>${p.name}<br>${fromCents(toCents(p.price))}`;
-    btn.addEventListener("click",()=>{
-      counters[p.id]++;updateTotals();
-    });
+    const btn=document.createElement('button');
+    btn.type='button'; btn.className='item'; btn.dataset.id=p.id;
+    btn.innerHTML=`<span class="badge">0</span><span class="emo">${p.emo}</span>${p.name}<br>${fromC(toC(p.price))}`;
+    btn.onclick=()=>{ counters[p.id]++; updateTotals(); };
     $grid.appendChild(btn);
   });
   updateTotals();
 }
+
+/* ====== Mise à jour totaux + badges + détail ====== */
 function updateTotals(){
   let total=0,count=0;
   Object.values(categories).flat().forEach(p=>{
-    total+=toCents(p.price)*counters[p.id];
-    count+=counters[p.id];
-    const el=$grid.querySelector(`[data-id="${p.id}"] .badge`);
-    if(el){ el.textContent=counters[p.id]; el.style.display=counters[p.id]>0?"inline-block":"none"; }
+    const q=counters[p.id]; total+=toC(p.price)*q; count+=q;
+    const badge=$grid.querySelector(`[data-id="${p.id}"] .badge`);
+    if(badge){ badge.textContent=q; badge.style.display=q>0?'inline-block':'none'; }
   });
-  $totalTxt.textContent=fromCents(total);
+  $totalTxt.textContent=fromC(total);
   $countTxt.textContent=count;
   renderDetails();
 }
+
+/* ====== Détail de commande (avec ✖) ====== */
 function renderDetails(){
   const lines=[];
   Object.values(categories).flat().forEach(p=>{
-    const q=counters[p.id];
-    if(q>0){
-      lines.push(`<div class="line" data-id="${p.id}">
-        <div>${p.emo} ${p.name} <span class="muted">×${q}</span></div>
-        <div class="muted">${fromCents(toCents(p.price))}</div>
-        <div><strong>${fromCents(toCents(p.price)*q)}</strong> <button class="remove">✖</button></div>
-      </div>`);
-    }
+    const q=counters[p.id]; if(q<=0) return;
+    lines.push(`<div class="line" data-id="${p.id}">
+      <div>${p.emo} ${p.name} <span class="muted">× ${q}</span></div>
+      <div class="muted">${fromC(toC(p.price))}</div>
+      <div><strong>${fromC(toC(p.price)*q)}</strong> <button class="remove" title="Retirer 1">✖</button></div>
+    </div>`);
   });
   $details.innerHTML=lines.join("")||"<div class='muted'>Aucun article</div>";
 }
+
+/* Ouvrir/fermer le détail en cliquant sur le bloc total */
 $totalsPanel.addEventListener("click",(e)=>{
-  if(e.target.closest(".remove")) return; // ne pas fermer si clic ✖
+  if(e.target.closest(".remove")) return; // ne ferme pas si clic sur ✖
   const open=!$details.hasAttribute("hidden");
-  if(open){$details.setAttribute("hidden","");$chev.textContent="▸";}else{$details.removeAttribute("hidden");$chev.textContent="▾";}
-});
-$details.addEventListener("click",(e)=>{
-  const rm=e.target.closest(".remove");
-  if(!rm)return;
-  e.stopPropagation();
-  const id=e.target.closest(".line").dataset.id;
-  if(counters[id]>0){counters[id]--;updateTotals();}
+  if(open){$details.setAttribute("hidden","");$chev.textContent="▸";}
+  else{$details.removeAttribute("hidden");$chev.textContent="▾";}
 });
 
-renderTabs();renderGrid();
+/* Retirer 1 avec ✖ (sans fermer le détail) */
+$details.addEventListener("click",(e)=>{
+  const rm=e.target.closest(".remove");
+  if(!rm) return;
+  e.stopPropagation();
+  const line=e.target.closest(".line");
+  const id=line?.dataset.id;
+  if(!id) return;
+  if(counters[id]>0){ counters[id]--; updateTotals(); }
+});
+
+/* Vider la commande */
+$clear.addEventListener('click', ()=>{
+  Object.keys(counters).forEach(k=>counters[k]=0);
+  updateTotals();
+  if(!$details.hasAttribute('hidden')) renderDetails();
+});
+
+/* ====== Init ====== */
+renderTabs(); renderGrid();
 </script>
 </body>
 </html>
