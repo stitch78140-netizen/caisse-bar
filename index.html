@@ -169,16 +169,17 @@
   });
 
   // Clic sur ✖ dans le détail → -1
-  $details.addEventListener('click', (e)=>{
-    const rm = e.target.closest('.remove');
-    if(!rm) return;
-    const line = e.target.closest('.line');
-    if(!line) return;
-    const id = line.dataset.id;
-    const cur = counters.get(id)||0;
-    if(cur>0) counters.set(id, cur-1);
-    renderTotalsAndBadges();
-  });
+$details.addEventListener('click', (e)=>{
+  const rm = e.target.closest('.remove');
+  if(!rm) return;
+  e.stopPropagation(); // 🔴 empêche le clic de remonter et de fermer la liste
+  const line = e.target.closest('.line');
+  if(!line) return;
+  const id = line.dataset.id;
+  const cur = counters.get(id)||0;
+  if(cur>0) counters.set(id, cur-1);
+  renderTotalsAndBadges();
+});
 
   // ===== Petit module "rendu" (comme avant, juste pour tester)
   const $cashGiven = document.getElementById('cashGiven');
