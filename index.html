@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Caisse rapide – étape 2</title>
+<title>Caisse rapide – étape 3</title>
 <style>
   body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; margin:0; background:#0f1217; color:#e6e9ef}
   header{padding:12px; background:#171b22}
@@ -13,6 +13,10 @@
   .item span{display:block; font-size:24px}
   .panel{background:#171b22; margin:12px; padding:12px; border-radius:10px}
   .big{font-size:28px; font-weight:700}
+  input{width:100%; height:40px; border-radius:8px; border:1px solid #243042; background:#0b1016; color:white; padding:0 10px; font-size:16px}
+  button{margin-top:8px; width:100%; height:40px; border-radius:8px; border:1px solid #243042; background:#3b82f6; color:white; font-size:16px; cursor:pointer}
+  .denoms{display:flex; flex-wrap:wrap; gap:6px; margin-top:6px}
+  .chip{border:1px solid #243042; padding:4px 8px; border-radius:999px; font-size:12px}
 </style>
 </head>
 <body>
@@ -31,9 +35,24 @@
     <div>Articles : <span id="count">0</span></div>
   </div>
 
+  <div class="panel">
+    <label>Montant donné (€)</label>
+    <input id="cashGiven" placeholder="0,00">
+    <button id="calcChange">Calculer rendu</button>
+    <div id="changeBox" style="margin-top:8px; display:none">
+      <strong>Rendu de monnaie :</strong> <span id="changeTxt">0,00 €</span>
+      <div class="denoms" id="denomsBox"></div>
+    </div>
+  </div>
+
 <script>
   const fmt = new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR'});
+  const toCents = (v) => Math.round(parseFloat(String(v).replace(',','.'))*100);
+  const fromCents = (c) => fmt.format(c/100);
+
   let total = 0, count = 0;
+
+  // Ajout articles
   document.querySelectorAll('.item').forEach(el=>{
     el.addEventListener('click', ()=>{
       total += parseFloat(el.dataset.price);
@@ -41,6 +60,32 @@
       document.getElementById('total').textContent = fmt.format(total);
       document.getElementById('count').textContent = count;
     });
+  });
+
+  // Calcul rendu
+  document.getElementById('calcChange').addEventListener('click', ()=>{
+    const given = toCents(document.getElementById('cashGiven').value||'0');
+    const due = Math.round(total*100);
+    const change = given - due;
+    const $box = document.getElementById('changeBox');
+    const $txt = document.getElementById('changeTxt');
+    const $denoms = document.getElementById('denomsBox');
+    if(change < 0){
+      $box.style.display = 'block';
+      $txt.textContent = `Montant insuffisant (manque ${fromCents(-change)})`;
+      $denoms.innerHTML = '';
+      return;
+    }
+    $box.style.display = 'block';
+    $txt.textContent = fromCents(change);
+    // Décomposition billets/pièces
+    const denoms = [20000,10000,5000,2000,1000,500,200,100,50,20,10,5];
+    let rest = change, chips = [];
+    for(const d of denoms){
+      const n = Math.floor(rest/d);
+      if(n>0){ chips.push(`${n} × ${fromCents(d)}`); rest -= n*d; }
+    }
+    $denoms.innerHTML = chips.map(c=>`<span class="chip">${c}</span>`).join('');
   });
 </script>
 </body>
