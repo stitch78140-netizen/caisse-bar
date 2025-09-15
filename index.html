@@ -3,99 +3,204 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Caisse rapide – avec compteurs</title>
+<title>Caisse – test détail & retrait</title>
 <style>
-  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; margin:0; background:#0f1217; color:#e6e9ef}
-  header{padding:12px; background:#171b22}
-  h1{margin:0; font-size:18px}
-  .grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:8px; padding:12px}
-  .item{position:relative; background:#0e131a; border:1px solid #222833; border-radius:10px; padding:10px; text-align:center; cursor:pointer}
-  .item span{display:block; font-size:24px}
-  .badge{position:absolute; top:6px; right:6px; background:#3b82f6; color:white; border-radius:999px; padding:2px 6px; font-size:12px; display:none}
-  .panel{background:#171b22; margin:12px; padding:12px; border-radius:10px}
-  .big{font-size:28px; font-weight:700}
-  input{width:100%; height:40px; border-radius:8px; border:1px solid #243042; background:#0b1016; color:white; padding:0 10px; font-size:16px}
-  button{margin-top:8px; width:100%; height:40px; border-radius:8px; border:1px solid #243042; background:#3b82f6; color:white; font-size:16px; cursor:pointer}
-  .denoms{display:flex; flex-wrap:wrap; gap:6px; margin-top:6px}
-  .chip{border:1px solid #243042; padding:4px 8px; border-radius:999px; font-size:12px}
+  :root{--bg:#0f1217;--panel:#171b22;--text:#e6e9ef;--muted:#9aa3b2;--accent:#3b82f6;--warn:#ef4444}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+  header{padding:12px;background:var(--panel)}
+  h1{margin:0;font-size:18px}
+  /* Grille de test (5 produits) */
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;padding:12px}
+  .item{
+    appearance:none;-webkit-appearance:none;border:1px solid #222833;background:#0e131a;color:inherit;border-radius:12px;
+    padding:10px;cursor:pointer;position:relative;text-align:center;user-select:none
+  }
+  .item .emo{display:block;font-size:24px;margin-bottom:4px}
+  .item .badge{position:absolute;top:6px;right:6px;background:var(--accent);color:#fff;border-radius:999px;padding:2px 6px;font-size:12px;display:none}
+  /* Panneau total cliquable */
+  .panel{background:var(--panel);margin:12px;border-radius:12px;padding:12px}
+  #totalsPanel{cursor:pointer}
+  #totalsPanel .row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .big{font-size:28px;font-weight:800}
+  .chev{font-size:16px;color:var(--muted)}
+  /* Détail déroulant */
+  #details{margin-top:8px;border-top:1px dashed #243042;padding-top:8px}
+  .line{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;padding:6px 0}
+  .muted{color:var(--muted);font-size:12px}
+  .remove{
+    border:1px solid #3a2222;background:#2a1515;color:#ffb4b4;border-radius:8px;height:32px;padding:0 10px;cursor:pointer
+  }
+  /* Paiement (inchangé, pour que tu gardes ton flux de test) */
+  input{
+    width:100%;height:40px;border-radius:10px;border:1px solid #243042;background:#0b1016;color:#fff;padding:0 10px;font-size:16px
+  }
+  .btn{height:40px;border-radius:10px;border:1px solid #243042;background:#0b1016;color:#fff;padding:0 12px;cursor:pointer}
+  .btn.primary{background:var(--accent);border-color:var(--accent)}
+  .denoms{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+  .chip{border:1px solid #243042;padding:4px 8px;border-radius:999px;font-size:12px}
 </style>
 </head>
 <body>
-  <header><h1>🍹 Caisse rapide</h1></header>
+  <header><h1>🍹 Caisse – test</h1></header>
 
-  <div class="grid">
-    <div class="item" data-price="0.80" data-id="soda"><div class="badge">0</div><span>🥤</span>Soda<br>0,80 €</div>
-    <div class="item" data-price="0.90" data-id="jus"><div class="badge">0</div><span>🧃</span>Jus<br>0,90 €</div>
-    <div class="item" data-price="1.00" data-id="pression"><div class="badge">0</div><span>🍺</span>Pression<br>1,00 €</div>
-    <div class="item" data-price="2.00" data-id="speciale"><div class="badge">0</div><span>🍻</span>Spéciale<br>2,00 €</div>
-    <div class="item" data-price="0.50" data-id="cafe"><div class="badge">0</div><span>☕</span>Café<br>0,50 €</div>
+  <!-- 5 produits de test -->
+  <div class="grid" id="grid">
+    <button type="button" class="item" data-id="soda"     data-price="0.80" data-name="Canette"><span class="badge">0</span><span class="emo">🥤</span>Canette<br>0,80 €</button>
+    <button type="button" class="item" data-id="jus"      data-price="0.90" data-name="Granini"><span class="badge">0</span><span class="emo">🧃</span>Granini<br>0,90 €</button>
+    <button type="button" class="item" data-id="pression" data-price="1.00" data-name="Pression"><span class="badge">0</span><span class="emo">🍺</span>Pression<br>1,00 €</button>
+    <button type="button" class="item" data-id="speciale" data-price="2.00" data-name="Bière spéciale"><span class="badge">0</span><span class="emo">🍻</span>Spéciale<br>2,00 €</button>
+    <button type="button" class="item" data-id="cafe"     data-price="0.50" data-name="Café / Déca / Choco"><span class="badge">0</span><span class="emo">☕</span>Chauds<br>0,50 €</button>
   </div>
 
-  <div class="panel">
-    <div>Total : <span class="big" id="total">0,00 €</span></div>
-    <div>Articles : <span id="count">0</span></div>
+  <!-- TOTAL cliquable -->
+  <div class="panel" id="totalsPanel" aria-expanded="false">
+    <div class="row">
+      <div>
+        <div class="muted">Total</div>
+        <div class="big" id="totalTxt">0,00 €</div>
+      </div>
+      <div style="text-align:right">
+        <div class="muted">Articles</div>
+        <div class="big"><span id="countTxt">0</span> <span class="chev" id="chev">▸</span></div>
+      </div>
+    </div>
+
+    <!-- Détail déroulant -->
+    <div id="details" hidden></div>
   </div>
 
+  <!-- Paiement (pour que tu puisses continuer tes tests) -->
   <div class="panel">
     <label>Montant donné (€)</label>
-    <input id="cashGiven" placeholder="0,00">
-    <button id="calcChange">Calculer rendu</button>
+    <input id="cashGiven" placeholder="0,00" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*">
+    <button class="btn primary" id="calcChange">Calculer rendu</button>
     <div id="changeBox" style="margin-top:8px; display:none">
-      <strong>Rendu de monnaie :</strong> <span id="changeTxt">0,00 €</span>
+      <strong>Rendu :</strong> <span id="changeTxt">0,00 €</span>
       <div class="denoms" id="denomsBox"></div>
     </div>
   </div>
 
 <script>
+  // ===== Utilitaires monnaie (travailler en centimes)
   const fmt = new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR'});
-  const toCents = (v) => Math.round(parseFloat(String(v).replace(',','.'))*100);
-  const fromCents = (c) => fmt.format(c/100);
+  const toCents = v => Math.round(parseFloat(String(v).replace(',','.'))*100);
+  const fromCents = c => fmt.format(c/100);
 
-  let total = 0, count = 0;
-  const counters = {};
-
-  // Ajout articles
+  // ===== Données produits (5 de test)
+  const products = new Map();
   document.querySelectorAll('.item').forEach(el=>{
     const id = el.dataset.id;
-    counters[id] = 0;
-    const badge = el.querySelector('.badge');
-    el.addEventListener('click', ()=>{
-      total += parseFloat(el.dataset.price);
-      count++;
-      counters[id]++;
-      // mettre à jour affichages
-      document.getElementById('total').textContent = fmt.format(total);
-      document.getElementById('count').textContent = count;
-      badge.textContent = counters[id];
-      badge.style.display = counters[id] > 0 ? 'inline-block' : 'none';
+    products.set(id, {
+      id,
+      name: el.dataset.name,
+      priceC: toCents(el.dataset.price),
+      badgeEl: el.querySelector('.badge'),
+      btnEl: el
     });
   });
 
-  // Calcul rendu
-  document.getElementById('calcChange').addEventListener('click', ()=>{
-    const given = toCents(document.getElementById('cashGiven').value||'0');
-    const due = Math.round(total*100);
-    const change = given - due;
-    const $box = document.getElementById('changeBox');
-    const $txt = document.getElementById('changeTxt');
-    const $denoms = document.getElementById('denomsBox');
-    if(change < 0){
-      $box.style.display = 'block';
-      $txt.textContent = `Montant insuffisant (manque ${fromCents(-change)})`;
-      $denoms.innerHTML = '';
-      return;
-    }
-    $box.style.display = 'block';
-    $txt.textContent = fromCents(change);
-    // Décomposition billets/pièces
-    const denoms = [20000,10000,5000,2000,1000,500,200,100,50,20,10,5];
-    let rest = change, chips = [];
-    for(const d of denoms){
-      const n = Math.floor(rest/d);
-      if(n>0){ chips.push(`${n} × ${fromCents(d)}`); rest -= n*d; }
-    }
-    $denoms.innerHTML = chips.map(c=>`<span class="chip">${c}</span>`).join('');
+  // Compteurs par produit
+  const counters = new Map([...products.keys()].map(id=>[id,0]));
+
+  // Éléments UI
+  const $grid = document.getElementById('grid');
+  const $totalTxt = document.getElementById('totalTxt');
+  const $countTxt = document.getElementById('countTxt');
+  const $details = document.getElementById('details');
+  const $totalsPanel = document.getElementById('totalsPanel');
+  const $chev = document.getElementById('chev');
+
+  // Recalcule total & compte, puis rafraîchit l'affichage
+  function renderTotalsAndBadges(){
+    let totalC = 0, count = 0;
+    counters.forEach((qty,id)=>{
+      const p = products.get(id);
+      totalC += p.priceC * qty;
+      count += qty;
+      // badge
+      p.badgeEl.textContent = qty;
+      p.badgeEl.style.display = qty>0 ? 'inline-block' : 'none';
+    });
+    $totalTxt.textContent = fromCents(totalC);
+    $countTxt.textContent = count;
+    renderDetails(); // tenir le détail en phase
+  }
+
+  // Construit la liste détaillée (produits avec bouton ✖ pour retirer 1)
+  function renderDetails(){
+    const lines = [];
+    counters.forEach((qty,id)=>{
+      if(qty<=0) return;
+      const p = products.get(id);
+      const lineTotal = p.priceC * qty;
+      lines.push(`
+        <div class="line" data-id="${id}">
+          <div>${p.btnEl.querySelector('.emo').textContent} ${p.name} <span class="muted">× ${qty}</span></div>
+          <div class="muted">${fromCents(p.priceC)}</div>
+          <div><strong>${fromCents(lineTotal)}</strong> <button class="remove" title="Retirer 1">✖</button></div>
+        </div>
+      `);
+    });
+    $details.innerHTML = lines.join('') || '<div class="muted">Aucun article.</div>';
+  }
+
+  // Clic sur un produit → +1
+  $grid.addEventListener('click', (e)=>{
+    const btn = e.target.closest('.item');
+    if(!btn) return;
+    const id = btn.dataset.id;
+    counters.set(id, (counters.get(id)||0) + 1);
+    renderTotalsAndBadges();
   });
+
+  // Clic sur TOTAL → toggle détail
+  $totalsPanel.addEventListener('click', ()=>{
+    const open = $details.hasAttribute('hidden') ? false : true;
+    if(open){
+      $details.setAttribute('hidden','');
+      $totalsPanel.setAttribute('aria-expanded','false');
+      $chev.textContent = '▸';
+    } else {
+      $details.removeAttribute('hidden');
+      $totalsPanel.setAttribute('aria-expanded','true');
+      $chev.textContent = '▾';
+    }
+  });
+
+  // Clic sur ✖ dans le détail → -1
+  $details.addEventListener('click', (e)=>{
+    const rm = e.target.closest('.remove');
+    if(!rm) return;
+    const line = e.target.closest('.line');
+    if(!line) return;
+    const id = line.dataset.id;
+    const cur = counters.get(id)||0;
+    if(cur>0) counters.set(id, cur-1);
+    renderTotalsAndBadges();
+  });
+
+  // ===== Petit module "rendu" (comme avant, juste pour tester)
+  const $cashGiven = document.getElementById('cashGiven');
+  const $changeBox = document.getElementById('changeBox');
+  const $changeTxt = document.getElementById('changeTxt');
+  const $denomsBox = document.getElementById('denomsBox');
+  document.getElementById('calcChange').addEventListener('click', ()=>{
+    // total en centimes depuis counters
+    let totalC=0; counters.forEach((q,id)=> totalC += products.get(id).priceC*q);
+    const given = toCents(($cashGiven.value||'0').replace(/\s/g,''));
+    const change = given - totalC;
+    $changeBox.style.display = 'block';
+    if(change < 0){ $changeTxt.textContent = `Manque ${fromCents(-change)}`; $denomsBox.innerHTML=''; return; }
+    $changeTxt.textContent = fromCents(change);
+    const denoms = [20000,10000,5000,2000,1000,500,200,100,50,20,10,5];
+    let rest=change; const chips=[];
+    for(const d of denoms){ const n=Math.floor(rest/d); if(n>0){ chips.push(`${n} × ${fromCents(d)}`); rest-=n*d; } }
+    $denomsBox.innerHTML = chips.map(c=>`<span class="chip">${c}</span>`).join('');
+  });
+
+  // init
+  renderTotalsAndBadges();
 </script>
 </body>
 </html>
