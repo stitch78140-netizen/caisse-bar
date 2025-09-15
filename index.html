@@ -50,6 +50,15 @@
   .quickcash{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
   .chip{border:1px solid #243042;padding:4px 8px;border-radius:999px;font-size:12px}
   .denoms{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+  /* Évite le double-tap zoom et les flashs bleus sur iOS */
+html, body { touch-action: manipulation; }
+.item, .btn { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+  .item, .btn {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+
 </style>
 </head>
 <body>
@@ -280,10 +289,25 @@ $details.addEventListener("click",(e)=>{
 
 /* Vider */
 $clear.addEventListener('click', ()=>{
+  // Remettre les compteurs d’articles à zéro
   Object.keys(counters).forEach(k=>counters[k]=0);
   updateTotals();
   if(!$details.hasAttribute('hidden')) renderDetails();
+
+  // 🔄 Remettre le paiement à zéro
+  if ($cashGiven) $cashGiven.value = '';
+  if ($changeBox) $changeBox.hidden = true;
+  if ($changeTxt) $changeTxt.textContent = '0,00 €';
+  if ($denomsBox) $denomsBox.innerHTML = '';
+
+  // 🔒 Replier le bloc Paiement si ouvert
+  if (!$paymentBody.hasAttribute("hidden")) {
+    $paymentBody.setAttribute("hidden","");
+    $chevPay.textContent="▸";
+  }
 });
+
+
 
 /* ====== Paiement repliable ====== */
 $paymentPanel.addEventListener("click",(e)=>{
@@ -335,5 +359,20 @@ renderTabs(); renderGrid();
     });
   }
 </script>
+  <script>
+  // Bloque le double-tap zoom iOS (sans gêner le pinch-to-zoom)
+  let lastTouch = 0;
+  document.addEventListener('touchend', (e) => {
+    const now = Date.now();
+    if (now - lastTouch <= 300) {
+      e.preventDefault();
+    }
+    lastTouch = now;
+  }, { passive: false });
+
+  // Par sécurité, empêche le double-clic souris de déclencher un zoom
+  document.addEventListener('dblclick', (e) => e.preventDefault(), { passive: false });
+</script>
+
 </body>
 </html>
