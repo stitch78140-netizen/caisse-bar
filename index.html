@@ -41,7 +41,7 @@
 </head>
 <body>
   <header>
-    <h1>🍹 Foyer - Bar CRS 08</h1>
+    <h1>🍹 Foyer - Bar </h1>
     <button class="btn warn" id="clear">Vider la commande</button>
   </header>
 
@@ -86,37 +86,115 @@
   </div>
 
 <script>
-/* ==== Utils monnaie ==== */
+/* ====== Utils monnaie ====== */
 const fmt = new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR'});
 const toC = v => Math.round(parseFloat(String(v).replace(',','.'))*100);
 const fromC = c => fmt.format(c/100);
 
-/* ==== Produits (simplifié pour test) ==== */
+/* ====== Données : catégories + produits ====== */
 const categories = {
   "☕ Chauds": [
     {id:"cafe",name:"Café",price:0.50,emo:"☕"},
-    {id:"the",name:"Thé",price:0.20,emo:"🍵"}
+    {id:"infusion",name:"Infusion",price:0.20,emo:"🍵"},
+    {id:"choco",name:"Chocolat chaud",price:0.50,emo:"🍫"}
   ],
   "🥤 Fraîches": [
-    {id:"canette",name:"Canette",price:0.80,emo:"🥤"},
-    {id:"eau",name:"Eau",price:0.30,emo:"💧"}
+    {id:"boitage",name:"Boitage (canettes)",price:0.80,emo:"🥤"},
+    {id:"jus",name:"Jus de fruits",price:0.90,emo:"🧃"},
+    {id:"eau-plate",name:"Eau plate",price:0.30,emo:"💧"},
+    {id:"eau-gaz",name:"Eau gazeuse",price:0.70,emo:"💦"},
+    {id:"limonade-verre",name:"Limonade (verre)",price:0.20,emo:"🥤"},
+    {id:"limonade-btl",name:"Limonade (bouteille)",price:1.20,emo:"🫙"}
+  ],
+  "🍺 Bières": [
+    {id:"biere-spe",name:"Bières spéciales",price:2.00,emo:"🍻"},
+    {id:"pelforth-pression",name:"Pelforth pression",price:1.00,emo:"🍺"},
+    {id:"lindemans-pression",name:"Lindemans pression",price:1.50,emo:"🍺"},
+    {id:"hoegaarden-btl",name:"Hoegaarden",price:1.00,emo:"🍺"},
+    {id:"grimbergen-btl",name:"Grimbergen",price:1.00,emo:"🍺"},
+    {id:"heineken-btl",name:"Heineken",price:1.00,emo:"🍺"},
+    {id:"1664-btl",name:"1664",price:1.00,emo:"🍺"},
+    {id:"leffe-btl",name:"Leffe",price:1.50,emo:"🍺"},
+    {id:"desperados-btl",name:"Despe",price:1.50,emo:"🍺"},
+    {id:"tourtel",name:"Tourtel Twist",price:1.00,emo:"🍺"}
+  ],
+  "🍷 Vins": [
+    {id:"rose-verre",name:"Vin rosé (verre)",price:0.60,emo:"🍷"},
+    {id:"blanc-verre",name:"Vin blanc (verre)",price:0.90,emo:"🥂"},
+    {id:"rose-btl",name:"Vin rosé (btl)",price:4.50,emo:"🍷"},
+    {id:"blanc-btl",name:"Vin blanc (btl)",price:6.75,emo:"🥂"},
+    {id:"crs-or",name:"Vin Cie Or",price:6.00,emo:"🍾"},
+    {id:"crs-rouge",name:"Vin Cie Rouge",price:8.00,emo:"🍾"},
+    {id:"beaujolais",name:"Beaujolais",price:4.50,emo:"🍷"},
+    {id:"champagne",name:"Champagne",price:18.00,emo:"🍾"}
+  ],
+  "🍬 Confiseries": [
+    {id:"cotedor",name:"Côte d'Or",price:1.00,emo:"🍫"},
+    {id:"kitkat",name:"KitKat",price:0.50,emo:"🍫"},
+    {id:"bounty",name:"Bounty",price:0.50,emo:"🥥"},
+    {id:"mars",name:"Mars",price:0.50,emo:"🍫"},
+    {id:"snickers",name:"Snickers",price:0.50,emo:"🍫"},
+    {id:"lion",name:"Lion",price:0.50,emo:"🍫"},
+    {id:"bueno",name:"Kinder Bueno",price:0.70,emo:"🍫"},
+    {id:"suchard",name:"Rocher Suchard",price:0.70,emo:"🍫"}
+  ],
+  "🚬 Cigarettes": [
+    {id:"marlboro-red",name:"Marlboro Red",price:13.50,emo:"🚬"},
+    {id:"marlboro-gold",name:"Marlboro Gold",price:13.50,emo:"🚬"},
+    {id:"philip-morris",name:"Philip Morris",price:12.00,emo:"🚬"}
+  ],
+  "🥨 Snacks": [
+    {id:"gateau-ap",name:"Gâteau apéritif",price:1.30,emo:"🥨"},
+    {id:"saucisson",name:"Saucisson",price:4.00,emo:"🐖"},
+    {id:"fuet",name:"Fuet / barquette",price:3.00,emo:"🐖"}
+  ],
+  "🧺 Divers": [
+    {id:"dose-lessive",name:"Dose lessive",price:0.60,emo:"🧼"},
+    {id:"jeton-machine",name:"Jeton machine",price:1.60,emo:"🪙"},
+    {id:"papier-toilette",name:"Papier toilette",price:0.40,emo:"🧻"},
+    {id:"mousse-raser",name:"Mousse à raser",price:2.00,emo:"🪒"}
+  ],
+  "👕 Utilitaire CRS": [
+    {id:"calot",name:"Calot",price:26.00,emo:"🎓"},
+    {id:"flamme-calot",name:"Flamme de calot",price:3.50,emo:"🔥"},
+    {id:"galon-poitrine",name:"Galon poitrine",price:3.20,emo:"🎖️"},
+    {id:"manchon",name:"Manchon",price:7.00,emo:"🧤"},
+    {id:"galon-calot-gd",name:"Galon calot GD",price:3.00,emo:"🎖️"},
+    {id:"tee-crs",name:"Tee-shirt",price:8.10,emo:"👕"},
+    {id:"tee-crs8-brode",name:"Tee-shirt brodé",price:11.00,emo:"👕"},
+    {id:"polo-crs",name:"Polo",price:20.00,emo:"👕"},
+    {id:"pucelle",name:"Pucelle",price:7.00,emo:"🎖️"},
+    {id:"medaille",name:"Médaille",price:20.00,emo:"🏅"},
+    {id:"temoin",name:"Témoin chambre vide",price:3.00,emo:"🪪"},
+    {id:"pince-cravate",name:"Pince cravate",price:8.00,emo:"👔"}
   ]
 };
 
-/* ==== État ==== */
-const counters={};Object.values(categories).flat().forEach(p=>counters[p.id]=0);
+/* ====== État : compteurs ====== */
+const counters = {};
+Object.values(categories).flat().forEach(p=>counters[p.id]=0);
 
-/* ==== DOM ==== */
-const $tabs=document.getElementById('tabs'),$grid=document.getElementById('grid');
-const $totalTxt=document.getElementById('totalTxt'),$countTxt=document.getElementById('countTxt');
-const $details=document.getElementById('details'),$totalsPanel=document.getElementById('totalsPanel'),$chev=document.getElementById('chev');
+/* ====== DOM ====== */
+const $tabs=document.getElementById('tabs');
+const $grid=document.getElementById('grid');
+const $totalTxt=document.getElementById('totalTxt');
+const $countTxt=document.getElementById('countTxt');
+const $details=document.getElementById('details');
+const $totalsPanel=document.getElementById('totalsPanel');
+const $chev=document.getElementById('chev');
 const $clear=document.getElementById('clear');
-const $paymentPanel=document.getElementById('paymentPanel'),$chevPay=document.getElementById('chevPay'),$paymentBody=document.getElementById('paymentBody');
-const $cashGiven=document.getElementById('cashGiven'),$quickCash=document.getElementById('quickCash'),$changeBox=document.getElementById('changeBox'),$changeTxt=document.getElementById('changeTxt'),$denomsBox=document.getElementById('denomsBox');
+const $paymentPanel=document.getElementById('paymentPanel');
+const $chevPay=document.getElementById('chevPay');
+const $paymentBody=document.getElementById('paymentBody');
+const $cashGiven=document.getElementById('cashGiven');
+const $quickCash=document.getElementById('quickCash');
+const $changeBox=document.getElementById('changeBox');
+const $changeTxt=document.getElementById('changeTxt');
+const $denomsBox=document.getElementById('denomsBox');
 
-let activeCat=Object.keys(categories)[0];
+let activeCat = Object.keys(categories)[0];
 
-/* ==== Onglets ==== */
+/* ====== Onglets ====== */
 function renderTabs(){
   $tabs.innerHTML="";
   Object.keys(categories).forEach(cat=>{
@@ -127,82 +205,111 @@ function renderTabs(){
     $tabs.appendChild(b);
   });
 }
+
+/* ====== Grille produits ====== */
 function renderGrid(){
   $grid.innerHTML="";
   categories[activeCat].forEach(p=>{
     const btn=document.createElement('button');
-    btn.className='item';btn.dataset.id=p.id;
+    btn.type='button'; btn.className='item'; btn.dataset.id=p.id;
     btn.innerHTML=`<span class="badge">0</span><span class="emo">${p.emo}</span>${p.name}<br>${fromC(toC(p.price))}`;
-    btn.onclick=()=>{counters[p.id]++;updateTotals();};
+    btn.onclick=()=>{ counters[p.id]++; updateTotals(); };
     $grid.appendChild(btn);
   });
   updateTotals();
 }
 
-/* ==== Totaux & détails ==== */
+/* ====== Totaux + détail ====== */
 function updateTotals(){
   let total=0,count=0;
   Object.values(categories).flat().forEach(p=>{
-    const q=counters[p.id];total+=toC(p.price)*q;count+=q;
+    const q=counters[p.id]; total+=toC(p.price)*q; count+=q;
     const badge=document.querySelector(`[data-id="${p.id}"] .badge`);
-    if(badge){badge.textContent=q;badge.style.display=q>0?'inline-block':'none';}
+    if(badge){ badge.textContent=q; badge.style.display=q>0?'inline-block':'none'; }
   });
-  $totalTxt.textContent=fromC(total);$countTxt.textContent=count;
+  $totalTxt.textContent=fromC(total);
+  $countTxt.textContent=count;
   renderDetails();
 }
+
 function renderDetails(){
   const lines=[];
   Object.values(categories).flat().forEach(p=>{
-    const q=counters[p.id];if(q<=0)return;
+    const q=counters[p.id]; if(q<=0) return;
     lines.push(`<div class="line" data-id="${p.id}">
-      <div>${p.emo} ${p.name} <span class="muted">×${q}</span></div>
+      <div>${p.emo} ${p.name} <span class="muted">× ${q}</span></div>
       <div class="muted">${fromC(toC(p.price))}</div>
-      <div><strong>${fromC(toC(p.price)*q)}</strong> <button class="remove">✖</button></div>
+      <div><strong>${fromC(toC(p.price)*q)}</strong> <button class="remove" title="Retirer 1">✖</button></div>
     </div>`);
   });
   $details.innerHTML=lines.join("")||"<div class='muted'>Aucun article</div>";
 }
+
+/* Ouvrir/fermer le détail (clic sur TOTAL) */
 $totalsPanel.addEventListener("click",(e)=>{
-  if(e.target.closest(".remove"))return;
+  if(e.target.closest(".remove")) return; // évite de replier si on clique ✖
   const open=!$details.hasAttribute("hidden");
   if(open){$details.setAttribute("hidden","");$chev.textContent="▸";}
   else{$details.removeAttribute("hidden");$chev.textContent="▾";}
 });
-$details.addEventListener("click",(e)=>{
-  const rm=e.target.closest(".remove");if(!rm)return;e.stopPropagation();
-  const id=e.target.closest(".line")?.dataset.id;if(!id)return;
-  if(counters[id]>0){counters[id]--;updateTotals();}
-});
-$clear.addEventListener("click",()=>{Object.keys(counters).forEach(k=>counters[k]=0);updateTotals();});
 
-/* ==== Paiement ==== */
-const QUICK=[0.10,0.20,0.50,1,2,5,10,20,50];
-$quickCash.innerHTML=QUICK.map(v=>`<button class="btn" data-v="${v}">+${String(v).replace('.',',')}€</button>`).join('');
-$quickCash.addEventListener("click",(e)=>{
-  const b=e.target.closest("button");if(!b)return;
-  const cur=parseFloat(($cashGiven.value||"0").replace(",","."))||0;
-  const nv=Math.round((cur+parseFloat(b.dataset.v))*100)/100;
-  $cashGiven.value=String(nv).replace(".",",");
+/* Retirer 1 avec ✖ (sans fermer) */
+$details.addEventListener("click",(e)=>{
+  const rm=e.target.closest(".remove");
+  if(!rm) return;
+  e.stopPropagation();
+  const line=e.target.closest(".line");
+  const id=line?.dataset.id;
+  if(!id) return;
+  if(counters[id]>0){ counters[id]--; updateTotals(); }
 });
-document.getElementById("calcChange").addEventListener("click",()=>{
-  let total=0;Object.values(categories).flat().forEach(p=>total+=toC(p.price)*(counters[p.id]||0));
-  const given=toC(($cashGiven.value||"0").replace(/\s/g,""));const change=given-total;
-  $changeBox.hidden=false;
-  if(change<0){$changeTxt.textContent=`Manque ${fromC(-change)}`;$denomsBox.innerHTML="";return;}
-  $changeTxt.textContent=fromC(change);
-  const denoms=[20000,10000,5000,2000,1000,500,200,100,50,20,10,5];
-  let rest=change,chips=[];for(const d of denoms){const n=Math.floor(rest/d);if(n>0){chips.push(`${n} × ${fromC(d)}`);rest-=n*d;}}
-  $denomsBox.innerHTML=chips.map(c=>`<span class="chip">${c}</span>`).join('');
+
+/* Vider */
+$clear.addEventListener('click', ()=>{
+  Object.keys(counters).forEach(k=>counters[k]=0);
+  updateTotals();
+  if(!$details.hasAttribute('hidden')) renderDetails();
 });
+
+/* ====== Paiement repliable ====== */
 $paymentPanel.addEventListener("click",(e)=>{
-  if(e.target.closest("input")||e.target.closest("button"))return; // pas fermer si clic dans form
+  // ne pas fermer si on clique sur un input/bouton à l'intérieur
+  if(e.target.closest("input") || e.target.closest("button")) return;
   const open=!$paymentBody.hasAttribute("hidden");
   if(open){$paymentBody.setAttribute("hidden","");$chevPay.textContent="▸";}
   else{$paymentBody.removeAttribute("hidden");$chevPay.textContent="▾";}
 });
 
-/* Init */
-renderTabs();renderGrid();
+// Raccourcis montants (inclut 0,10€ et 0,20€)
+const QUICK=[0.10,0.20,0.50,1,2,5,10,20,50];
+$quickCash.innerHTML=QUICK.map(v=>`<button class="btn" data-v="${v}">+${String(v).replace('.',',')}€</button>`).join('');
+$quickCash.addEventListener("click",(e)=>{
+  const b=e.target.closest("button"); if(!b) return;
+  const cur=parseFloat(($cashGiven.value||"0").replace(",", "."))||0;
+  const nv=Math.round((cur + parseFloat(b.dataset.v))*100)/100;
+  $cashGiven.value=String(nv).replace(".", ",");
+});
+
+// Calcul du rendu (décomposition inclut 0,20€ et 0,10€)
+document.getElementById("calcChange").addEventListener("click",()=>{
+  let total=0; Object.values(categories).flat().forEach(p=> total += toC(p.price)*(counters[p.id]||0));
+  const given = toC(($cashGiven.value || "0").replace(/\s/g,""));
+  const change = given - total;
+  $changeBox.hidden = false;
+  if(change < 0){
+    $changeTxt.textContent = `Montant insuffisant (manque ${fromC(-change)})`;
+    $denomsBox.innerHTML = "";
+    return;
+  }
+  $changeTxt.textContent = fromC(change);
+  const denoms = [20000,10000,5000,2000,1000,500,200,100,50,20,10,5]; // 200€, 100€, ..., 0,05€
+  let rest = change; const chips=[];
+  for(const d of denoms){ const n=Math.floor(rest/d); if(n>0){ chips.push(`${n} × ${fromC(d)}`); rest-=n*d; } }
+  $denomsBox.innerHTML = chips.map(c=>`<span class="chip">${c}</span>`).join('');
+});
+
+/* ====== Init ====== */
+renderTabs(); renderGrid();
 </script>
 </body>
 </html>
