@@ -4,6 +4,19 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Caisse – Bar (commande + paiement repliable)</title>
+
+<!-- ✅ PWA manifest -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0f1217">
+
+<!-- ✅ Icône iPhone (conseillé) -->
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+<!-- (Optionnel, pour rester discret) -->
+<meta name="robots" content="noindex,nofollow">
+
 <style>
   :root{--bg:#0f1217;--panel:#171b22;--text:#e6e9ef;--muted:#9aa3b2;--accent:#3b82f6;--warn:#ef4444}
   *{box-sizing:border-box}
@@ -40,6 +53,7 @@
 </style>
 </head>
 <body>
+
   <header>
     <h1>🍹 Foyer - Bar </h1>
     <button class="btn warn" id="clear">Vider la commande</button>
@@ -310,6 +324,16 @@ document.getElementById("calcChange").addEventListener("click",()=>{
 
 /* ====== Init ====== */
 renderTabs(); renderGrid();
+</script>
+  <script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker
+        .register('./sw.js')
+        .then(() => console.log("✅ Service worker enregistré"))
+        .catch(err => console.error("❌ SW erreur", err));
+    });
+  }
 </script>
 </body>
 </html>
