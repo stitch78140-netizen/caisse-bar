@@ -1,5 +1,5 @@
 // sw.js — met le site en cache pour hors-ligne
-const CACHE_VERSION = 'v1.0.0';
+const CACHE_VERSION = 'v1.0.1';
 const CACHE_NAME = `caisse-${CACHE_VERSION}`;
 const ASSETS = [
   './',
