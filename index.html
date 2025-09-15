@@ -40,4 +40,62 @@
     <label>Montant donné (€)</label>
     <input id="cashGiven" placeholder="0,00">
     <button id="calcChange">Calculer rendu</button>
-    <div id="changeBox" st
+    <div id="changeBox" style="margin-top:8px; display:none">
+      <strong>Rendu de monnaie :</strong> <span id="changeTxt">0,00 €</span>
+      <div class="denoms" id="denomsBox"></div>
+    </div>
+  </div>
+
+<script>
+  const fmt = new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR'});
+  const toCents = (v) => Math.round(parseFloat(String(v).replace(',','.'))*100);
+  const fromCents = (c) => fmt.format(c/100);
+
+  let total = 0, count = 0;
+  const counters = {};
+
+  // Ajout articles
+  document.querySelectorAll('.item').forEach(el=>{
+    const id = el.dataset.id;
+    counters[id] = 0;
+    const badge = el.querySelector('.badge');
+    el.addEventListener('click', ()=>{
+      total += parseFloat(el.dataset.price);
+      count++;
+      counters[id]++;
+      // mettre à jour affichages
+      document.getElementById('total').textContent = fmt.format(total);
+      document.getElementById('count').textContent = count;
+      badge.textContent = counters[id];
+      badge.style.display = counters[id] > 0 ? 'inline-block' : 'none';
+    });
+  });
+
+  // Calcul rendu
+  document.getElementById('calcChange').addEventListener('click', ()=>{
+    const given = toCents(document.getElementById('cashGiven').value||'0');
+    const due = Math.round(total*100);
+    const change = given - due;
+    const $box = document.getElementById('changeBox');
+    const $txt = document.getElementById('changeTxt');
+    const $denoms = document.getElementById('denomsBox');
+    if(change < 0){
+      $box.style.display = 'block';
+      $txt.textContent = `Montant insuffisant (manque ${fromCents(-change)})`;
+      $denoms.innerHTML = '';
+      return;
+    }
+    $box.style.display = 'block';
+    $txt.textContent = fromCents(change);
+    // Décomposition billets/pièces
+    const denoms = [20000,10000,5000,2000,1000,500,200,100,50,20,10,5];
+    let rest = change, chips = [];
+    for(const d of denoms){
+      const n = Math.floor(rest/d);
+      if(n>0){ chips.push(`${n} × ${fromCents(d)}`); rest -= n*d; }
+    }
+    $denoms.innerHTML = chips.map(c=>`<span class="chip">${c}</span>`).join('');
+  });
+</script>
+</body>
+</html>
