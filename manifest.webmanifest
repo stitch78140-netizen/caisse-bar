@@ -2,7 +2,7 @@
   "name": "Foyer Bar",
   "short_name": "Bar",
   "description": "Caisse simple avec onglets, détail et rendu de monnaie.",
-  "start_url": "/caisse-bar/",
+  "start_url": "/caisse-bar/index.html",
   "scope": "/caisse-bar/",
   "display": "standalone",
   "background_color": "#0f1217",
