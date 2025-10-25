@@ -1,3 +1,12 @@
+self.addEventListener('install', () => {
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', () => {
+  // Ne contrôle QUE le dossier /caisse-bar/
+  clients.claim();
+});
+
 // sw.js — met le site en cache pour hors-ligne
 const CACHE_VERSION = 'v1.0.4';
 const CACHE_NAME = `caisse-${CACHE_VERSION}`;
