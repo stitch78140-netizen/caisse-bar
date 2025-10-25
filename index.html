@@ -351,14 +351,31 @@ document.getElementById("calcChange").addEventListener("click",()=>{
 renderTabs(); renderGrid();
 </script>
   <script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker
-        .register('./sw.js')
-        .then(() => console.log("✅ Service worker enregistré"))
-        .catch(err => console.error("❌ SW erreur", err));
-    });
-  }
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    // 🧩 Enregistre le SW pour /caisse-bar/ uniquement
+    navigator.serviceWorker
+      .register('/caisse-bar/sw.js', { scope: '/caisse-bar/' })
+      .then(() => console.log("✅ SW caisse-bar enregistré avec scope /caisse-bar/"))
+      .catch(err => console.error("❌ Erreur SW caisse-bar", err));
+  });
+}
+</script>
+
+<!-- Pare-feu : désactive un SW racine s’il traîne encore -->
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(regs => {
+    for (const reg of regs) {
+      const scope = new URL(reg.scope).pathname;
+      // Si on est dans /caisse-bar/ et qu’un SW racine est présent → on le dégage
+      if (location.pathname.startsWith('/caisse-bar/') && scope === '/') {
+        console.log('🧹 Suppression d’un ancien SW racine parasite');
+        reg.unregister();
+      }
+    }
+  });
+}
 </script>
   <script>
   // Bloque le double-tap zoom iOS (sans gêner le pinch-to-zoom)
