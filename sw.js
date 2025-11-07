@@ -1,9 +1,8 @@
-// sw.js — /caisse-bar/ uniquement (le scope vient du register côté page)
+// sw.js — ne gère QUE /caisse-bar/
+const SCOPE_PATH = '/caisse-bar/';
+const CACHE_VERSION = 'v1.0.6';                 // ← bump pour forcer la MAJ
+const CACHE_NAME    = `caisse-${CACHE_VERSION}`;
 
-const CACHE_VERSION = 'v1.0.5';
-const CACHE_NAME = `caisse-${CACHE_VERSION}`;
-
-// Chemins ABSOLUS vers les assets de l’app /caisse-bar/
 const ASSETS = [
   '/caisse-bar/',
   '/caisse-bar/index.html',
@@ -20,31 +19,44 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys
-        .filter(k => k.startsWith('caisse-') && k !== CACHE_NAME)
-        .map(k => caches.delete(k))
-      )
-    )
+    (async () => {
+      // purge anciens caches de la caisse
+      const keys = await caches.keys();
+      await Promise.all(
+        keys.filter(k => k.startsWith('caisse-') && k !== CACHE_NAME).map(k => caches.delete(k))
+      );
+      // prend le contrôle immédiatement
+      await self.clients.claim();
+    })()
   );
-  self.clients.claim();
 });
 
-// Stratégie: network-first pour les navigations, cache-first pour le reste
+// Network-first pour les navigations, cache-first pour le reste
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
+  const url = new URL(event.request.url);
+
+  // 🔒 NE S'OCCUPE QUE de /caisse-bar/
+  if (!url.pathname.startsWith(SCOPE_PATH)) return;
+
   if (event.request.mode === 'navigate') {
     event.respondWith(
-      fetch(event.request).catch(() => caches.match('/caisse-bar/index.html'))
+      fetch(event.request).catch(() => caches.match('/caisse-bar/index.html', { ignoreSearch: true }))
     );
     return;
   }
 
   event.respondWith(
-    caches.match(event.request).then(res => res || fetch(event.request).then(netRes => {
-      caches.open(CACHE_NAME).then(cache => cache.put(event.request, netRes.clone()));
+    (async () => {
+      // cache-first (ignoreSearch pour les ?v=123 etc.)
+      const cached = await caches.match(event.request, { ignoreSearch: true });
+      if (cached) return cached;
+
+      const netRes = await fetch(event.request);
+      const cache = await caches.open(CACHE_NAME);
+      cache.put(event.request, netRes.clone()).catch(()=>{});
       return netRes;
-    }))
+    })()
   );
 });
