@@ -1,0 +1,83 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Reset SW + Caches</title>
+<style>
+  body {
+    font-family: system-ui, sans-serif;
+    background: #0f1217;
+    color: #e6e9ef;
+    max-width: 600px;
+    margin: 40px auto;
+    padding: 20px;
+  }
+  h1 { font-size: 20px; }
+  .log {
+    white-space: pre-wrap;
+    background: #171b22;
+    color: #eee;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    margin-top: 10px;
+    min-height: 100px;
+  }
+  button {
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid #243042;
+    background: #1a2230;
+    color: #fff;
+    cursor: pointer;
+    margin-top: 10px;
+  }
+  button:hover {
+    background: #3b82f6;
+  }
+</style>
+
+<h1>🔧 Purge Service Workers & Caches</h1>
+<p>Cette page supprime tous les Service Workers et les caches liés à ce domaine GitHub Pages.</p>
+
+<div class="log" id="log">En attente...</div>
+<p>
+  <button id="run">Lancer la purge</button>
+  <button onclick="location.href='/caisse-bar/'">Retour à l’app</button>
+</p>
+
+<script>
+(async function(){
+  const $log = document.getElementById('log');
+  const log  = (...a)=>{$log.textContent += '\n' + a.join(' ');};
+  $log.textContent = 'Origine : ' + location.origin + '\n';
+
+  document.getElementById('run').onclick = async () => {
+    try {
+      log('--- Début purge ---');
+
+      // 🔹 Supprime tous les Service Workers
+      if ('serviceWorker' in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        if (regs.length === 0) log('Aucun SW trouvé.');
+        for (const r of regs) {
+          log('→ Désenregistrement SW :', r.scope);
+          await r.unregister();
+        }
+      }
+
+      // 🔹 Supprime tous les caches
+      const keys = await caches.keys();
+      if (keys.length === 0) log('Aucun cache trouvé.');
+      for (const k of keys) {
+        log('→ Suppression cache :', k);
+        await caches.delete(k);
+      }
+
+      log('✅ Terminé ! Rechargement dans 2 secondes...');
+      setTimeout(() => location.replace('/caisse-bar/'), 2000);
+
+    } catch(e) {
+      log('❌ Erreur :', e.message);
+    }
+  };
+})();
+</script>
