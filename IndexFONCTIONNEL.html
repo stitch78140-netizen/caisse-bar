@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Caisse – Bar (commande + paiement repliable)</title>
+
+<!-- ✅ PWA manifest -->
+<link rel="manifest" href="/caisse-bar/manifest.webmanifest">
+  <meta name="theme-color" content="#0f1217">
+
+<!-- ✅ Icône iPhone (conseillé) -->
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+<!-- (Optionnel, pour rester discret) -->
+<meta name="robots" content="noindex,nofollow">
+
+<style>
+  :root{--bg:#0f1217;--panel:#171b22;--text:#e6e9ef;--muted:#9aa3b2;--accent:#3b82f6;--warn:#ef4444}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+  header{padding:12px;background:var(--panel);display:flex;justify-content:space-between;align-items:center}
+  h1{margin:0;font-size:18px}
+  .btn{height:32px;border-radius:10px;border:1px solid #243042;background:#0b1016;color:#fff;padding:0 10px;cursor:pointer}
+  .btn.warn{background:#2a1515;border-color:#3a2222;color:#ffb4b4}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  /* Tabs */
+  .tabs{display:flex;gap:6px;overflow:auto;padding:8px 12px;background:#0e131a;border-bottom:1px solid #222833}
+  .tab{padding:6px 12px;border-radius:999px;border:1px solid #243042;background:#0b1016;color:var(--text);cursor:pointer;white-space:nowrap;font-size:14px}
+  .tab.active{background:var(--accent);border-color:var(--accent);color:#fff}
+  /* Grid produits */
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;padding:12px}
+  .item{appearance:none;-webkit-appearance:none;border:1px solid #222833;background:#0e131a;color:inherit;border-radius:12px;padding:10px;cursor:pointer;position:relative;text-align:center}
+  .item .emo{display:block;font-size:24px;margin-bottom:4px}
+  .item .badge{position:absolute;top:6px;right:6px;background:var(--accent);color:#fff;border-radius:999px;padding:2px 6px;font-size:12px;display:none}
+  /* Panneaux */
+  .panel{background:var(--panel);margin:12px;border-radius:12px;padding:12px}
+  .row{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+  .big{font-size:26px;font-weight:800}
+  .muted{color:var(--muted);font-size:12px}
+  .chev{font-size:16px;color:var(--muted)}
+  #details,#paymentBody{margin-top:8px;border-top:1px dashed #243042;padding-top:8px}
+  .line{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;padding:6px 0}
+  .remove{border:1px solid #3a2222;background:#2a1515;color:#ffb4b4;border-radius:8px;height:24px;padding:0 6px;cursor:pointer}
+  /* Paiement */
+  .payrow{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}
+  input.payin{width:100%;height:36px;border-radius:10px;border:1px solid #243042;background:#0b1016;color:#fff;padding:0 8px;font-size:16px}
+  .quickcash{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+  .chip{border:1px solid #243042;padding:4px 8px;border-radius:999px;font-size:12px}
+  .denoms{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+  /* Évite le double-tap zoom et les flashs bleus sur iOS */
+html, body { touch-action: manipulation; }
+.item, .btn { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+  .item, .btn {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+
+</style>
+</head>
+<body>
+
+  <header>
+    <h1>🍹 Foyer - Bar </h1>
+    <button class="btn warn" id="clear">Vider la commande</button>
+  </header>
+
+  <!-- Onglets -->
+  <div class="tabs" id="tabs"></div>
+
+  <!-- Zone produits -->
+  <div class="grid" id="grid"></div>
+
+  <!-- Totaux + détail -->
+  <div class="panel" id="totalsPanel">
+    <div class="row">
+      <div>
+        <div class="muted">Total</div>
+        <div class="big" id="totalTxt">0,00 €</div>
+      </div>
+      <div>
+        <div class="muted">Articles</div>
+        <div class="big"><span id="countTxt">0</span> <span class="chev" id="chev">▸</span></div>
+      </div>
+    </div>
+    <div id="details" hidden></div>
+  </div>
+
+  <!-- Paiement repliable -->
+  <div class="panel" id="paymentPanel">
+    <div class="row">
+      <div><strong>💶 Paiement</strong></div>
+      <div class="chev" id="chevPay">▸</div>
+    </div>
+    <div id="paymentBody" hidden>
+      <div class="payrow">
+        <input class="payin" id="cashGiven" placeholder="Montant donné (ex: 10,00)" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*">
+        <button class="btn primary" id="calcChange">Calculer</button>
+      </div>
+      <div class="quickcash" id="quickCash"></div>
+      <div id="changeBox" hidden>
+        <div><strong>Rendu :</strong> <span id="changeTxt">0,00 €</span></div>
+        <div class="denoms" id="denomsBox"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* ====== Utils monnaie ====== */
+const fmt = new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR'});
+const toC = v => Math.round(parseFloat(String(v).replace(',','.'))*100);
+const fromC = c => fmt.format(c/100);
+
+/* ====== Données : catégories + produits ====== */
+const categories = {
+  "☕ Chauds": [
+    {id:"cafe",name:"Café",price:0.50,emo:"☕"},
+    {id:"infusion",name:"Infusion",price:0.20,emo:"🍵"},
+    {id:"choco",name:"Chocolat chaud",price:0.50,emo:"🍫"}
+  ],
+  "🥤 Fraîches": [
+    {id:"boitage",name:"Boitage (canettes)",price:0.80,emo:"🥤"},
+    {id:"jus",name:"Jus de fruits",price:0.90,emo:"🧃"},
+    {id:"eau-plate",name:"Eau plate",price:0.30,emo:"💧"},
+    {id:"eau-gaz",name:"Eau gazeuse",price:0.70,emo:"💦"},
+    {id:"limonade-verre",name:"Limonade (verre)",price:0.20,emo:"🥤"},
+    {id:"limonade-btl",name:"Limonade (bouteille)",price:1.20,emo:"🫙"},
+    { id:"redbull", name:"Red Bull", price:1.50, emo:"🪽" }
+  ],
+  "🍺 Bières": [
+    {id:"biere-spe",name:"Bières spéciales",price:2.00,emo:"🍻"},
+    {id:"pelforth-pression",name:"Pelforth pression",price:1.00,emo:"🍺"},
+    {id:"lindemans-pression",name:"Lindemans pression",price:1.50,emo:"🍺"},
+    {id:"hoegaarden-btl",name:"Hoegaarden",price:1.00,emo:"🍺"},
+    {id:"grimbergen-btl",name:"Grimbergen",price:1.00,emo:"🍺"},
+    {id:"heineken-btl",name:"Heineken",price:1.00,emo:"🍺"},
+    {id:"1664-btl",name:"1664",price:1.00,emo:"🍺"},
+    {id:"leffe-btl",name:"Leffe",price:1.00,emo:"🍺"},
+    {id:"desperados-btl",name:"Despe",price:1.50,emo:"🍺"},
+    {id:"tourtel",name:"Tourtel Twist",price:1.00,emo:"🍺"}
+  ],
+  "🍷 Vins": [
+    {id:"rose-verre",name:"Vin rosé (verre)",price:0.60,emo:"🍷"},
+    {id:"blanc-verre",name:"Vin blanc (verre)",price:0.90,emo:"🥂"},
+    {id:"rose-btl",name:"Vin rosé (btl)",price:4.50,emo:"🍷"},
+    {id:"blanc-btl",name:"Vin blanc (btl)",price:6.75,emo:"🥂"},
+    {id:"crs-or",name:"Vin Cie Or",price:6.00,emo:"🍾"},
+    {id:"crs-rouge",name:"Vin Cie Rouge",price:8.00,emo:"🍾"},
+    {id:"beaujolais",name:"Beaujolais",price:4.50,emo:"🍷"},
+    {id:"champagne",name:"Champagne",price:18.00,emo:"🍾"}
+  ],
+  "🍬 Confiseries": [
+    {id:"cotedor",name:"Côte d'Or",price:1.00,emo:"🍫"},
+    {id:"kitkat",name:"KitKat",price:0.50,emo:"🍫"},
+    {id:"bounty",name:"Bounty",price:0.50,emo:"🥥"},
+    {id:"mars",name:"Mars",price:0.50,emo:"🍫"},
+    {id:"snickers",name:"Snickers",price:0.50,emo:"🍫"},
+    {id:"lion",name:"Lion",price:0.50,emo:"🍫"},
+    {id:"bueno",name:"Kinder Bueno",price:0.70,emo:"🍫"},
+    {id:"suchard",name:"Rocher Suchard",price:0.70,emo:"🍫"}
+  ],
+  "🚬 Cigarettes": [
+    {id:"marlboro-red",name:"Marlboro Red",price:13.00,emo:"🚬"},
+    {id:"marlboro-gold",name:"Marlboro Gold",price:13.00,emo:"🚬"},
+    {id:"philip-morris",name:"Philip Morris",price:12.50,emo:"🚬"}
+  ],
+  "🥨 Snacks": [
+    {id:"gateau-ap",name:"Gâteau apéritif",price:1.30,emo:"🥨"},
+    {id:"saucisson",name:"Saucisson",price:4.00,emo:"🐖"},
+    {id:"fuet",name:"Fuet / barquette",price:3.00,emo:"🐖"}
+  ],
+  "🧺 Divers": [
+    {id:"dose-lessive",name:"Dose lessive",price:0.60,emo:"🧼"},
+    {id:"jeton-machine",name:"Jeton machine",price:1.60,emo:"🪙"},
+    {id:"papier-toilette",name:"Papier toilette",price:0.40,emo:"🧻"},
+    {id:"mousse-raser",name:"Mousse à raser",price:2.00,emo:"🪒"}
+  ],
+  "👕 Utilitaire CRS": [
+    {id:"calot",name:"Calot",price:26.00,emo:"🎓"},
+    {id:"flamme-calot",name:"Flamme de calot",price:3.50,emo:"🔥"},
+    {id:"galon-poitrine",name:"Galon poitrine",price:3.20,emo:"🎖️"},
+    {id:"manchon",name:"Manchon",price:7.00,emo:"🧤"},
+    {id:"galon-calot-gd",name:"Galon calot GD",price:3.00,emo:"🎖️"},
+    {id:"tee-crs",name:"Tee-shirt",price:8.10,emo:"👕"},
+    {id:"tee-crs8-brode",name:"Tee-shirt brodé",price:11.00,emo:"👕"},
+    {id:"polo-crs",name:"Polo",price:20.00,emo:"👕"},
+    {id:"pucelle",name:"Pucelle",price:7.00,emo:"🎖️"},
+    {id:"medaille",name:"Médaille",price:20.00,emo:"🏅"},
+    {id:"temoin",name:"Témoin chambre vide",price:3.00,emo:"🪪"},
+    {id:"pince-cravate",name:"Pince cravate",price:8.00,emo:"👔"}
+  ]
+};
+
+/* ====== État : compteurs ====== */
+const counters = {};
+Object.values(categories).flat().forEach(p=>counters[p.id]=0);
+
+/* ====== DOM ====== */
+const $tabs=document.getElementById('tabs');
+const $grid=document.getElementById('grid');
+const $totalTxt=document.getElementById('totalTxt');
+const $countTxt=document.getElementById('countTxt');
+const $details=document.getElementById('details');
+const $totalsPanel=document.getElementById('totalsPanel');
+const $chev=document.getElementById('chev');
+const $clear=document.getElementById('clear');
+const $paymentPanel=document.getElementById('paymentPanel');
+const $chevPay=document.getElementById('chevPay');
+const $paymentBody=document.getElementById('paymentBody');
+const $cashGiven=document.getElementById('cashGiven');
+const $quickCash=document.getElementById('quickCash');
+const $changeBox=document.getElementById('changeBox');
+const $changeTxt=document.getElementById('changeTxt');
+const $denomsBox=document.getElementById('denomsBox');
+
+let activeCat = Object.keys(categories)[0];
+
+/* ====== Onglets ====== */
+function renderTabs(){
+  $tabs.innerHTML="";
+  Object.keys(categories).forEach(cat=>{
+    const b=document.createElement('button');
+    b.className='tab'+(cat===activeCat?' active':'');
+    b.textContent=cat;
+    b.onclick=()=>{activeCat=cat;renderTabs();renderGrid();};
+    $tabs.appendChild(b);
+  });
+}
+
+/* ====== Grille produits ====== */
+function renderGrid(){
+  $grid.innerHTML="";
+  categories[activeCat].forEach(p=>{
+    const btn=document.createElement('button');
+    btn.type='button'; btn.className='item'; btn.dataset.id=p.id;
+    btn.innerHTML=`<span class="badge">0</span><span class="emo">${p.emo}</span>${p.name}<br>${fromC(toC(p.price))}`;
+    btn.onclick=()=>{ counters[p.id]++; updateTotals(); };
+    $grid.appendChild(btn);
+  });
+  updateTotals();
+}
+
+/* ====== Totaux + détail ====== */
+function updateTotals(){
+  let total=0,count=0;
+  Object.values(categories).flat().forEach(p=>{
+    const q=counters[p.id]; total+=toC(p.price)*q; count+=q;
+    const badge=document.querySelector(`[data-id="${p.id}"] .badge`);
+    if(badge){ badge.textContent=q; badge.style.display=q>0?'inline-block':'none'; }
+  });
+  $totalTxt.textContent=fromC(total);
+  $countTxt.textContent=count;
+  renderDetails();
+}
+
+function renderDetails(){
+  const lines=[];
+  Object.values(categories).flat().forEach(p=>{
+    const q=counters[p.id]; if(q<=0) return;
+    lines.push(`<div class="line" data-id="${p.id}">
+      <div>${p.emo} ${p.name} <span class="muted">× ${q}</span></div>
+      <div class="muted">${fromC(toC(p.price))}</div>
+      <div><strong>${fromC(toC(p.price)*q)}</strong> <button class="remove" title="Retirer 1">✖</button></div>
+    </div>`);
+  });
+  $details.innerHTML=lines.join("")||"<div class='muted'>Aucun article</div>";
+}
+
+/* Ouvrir/fermer le détail (clic sur TOTAL) */
+$totalsPanel.addEventListener("click",(e)=>{
+  if(e.target.closest(".remove")) return; // évite de replier si on clique ✖
+  const open=!$details.hasAttribute("hidden");
+  if(open){$details.setAttribute("hidden","");$chev.textContent="▸";}
+  else{$details.removeAttribute("hidden");$chev.textContent="▾";}
+});
+
+/* Retirer 1 avec ✖ (sans fermer) */
+$details.addEventListener("click",(e)=>{
+  const rm=e.target.closest(".remove");
+  if(!rm) return;
+  e.stopPropagation();
+  const line=e.target.closest(".line");
+  const id=line?.dataset.id;
+  if(!id) return;
+  if(counters[id]>0){ counters[id]--; updateTotals(); }
+});
+
+/* Vider */
+$clear.addEventListener('click', ()=>{
+  // Remettre les compteurs d’articles à zéro
+  Object.keys(counters).forEach(k=>counters[k]=0);
+  updateTotals();
+  if(!$details.hasAttribute('hidden')) renderDetails();
+
+  // 🔄 Remettre le paiement à zéro
+  if ($cashGiven) $cashGiven.value = '';
+  if ($changeBox) $changeBox.hidden = true;
+  if ($changeTxt) $changeTxt.textContent = '0,00 €';
+  if ($denomsBox) $denomsBox.innerHTML = '';
+
+  // 🔒 Replier le bloc Paiement si ouvert
+  if (!$paymentBody.hasAttribute("hidden")) {
+    $paymentBody.setAttribute("hidden","");
+    $chevPay.textContent="▸";
+  }
+});
+
+
+
+/* ====== Paiement repliable ====== */
+$paymentPanel.addEventListener("click",(e)=>{
+  // ne pas fermer si on clique sur un input/bouton à l'intérieur
+  if(e.target.closest("input") || e.target.closest("button")) return;
+  const open=!$paymentBody.hasAttribute("hidden");
+  if(open){$paymentBody.setAttribute("hidden","");$chevPay.textContent="▸";}
+  else{$paymentBody.removeAttribute("hidden");$chevPay.textContent="▾";}
+});
+
+// Raccourcis montants (inclut 0,10€ et 0,20€)
+const QUICK=[0.10,0.20,0.50,1,2,5,10,20,50];
+$quickCash.innerHTML=QUICK.map(v=>`<button class="btn" data-v="${v}">+${String(v).replace('.',',')}€</button>`).join('');
+$quickCash.addEventListener("click",(e)=>{
+  const b=e.target.closest("button"); if(!b) return;
+  const cur=parseFloat(($cashGiven.value||"0").replace(",", "."))||0;
+  const nv=Math.round((cur + parseFloat(b.dataset.v))*100)/100;
+  $cashGiven.value=String(nv).replace(".", ",");
+});
+
+// Calcul du rendu (décomposition inclut 0,20€ et 0,10€)
+document.getElementById("calcChange").addEventListener("click",()=>{
+  let total=0; Object.values(categories).flat().forEach(p=> total += toC(p.price)*(counters[p.id]||0));
+  const given = toC(($cashGiven.value || "0").replace(/\s/g,""));
+  const change = given - total;
+  $changeBox.hidden = false;
+  if(change < 0){
+    $changeTxt.textContent = `Montant insuffisant (manque ${fromC(-change)})`;
+    $denomsBox.innerHTML = "";
+    return;
+  }
+  $changeTxt.textContent = fromC(change);
+  const denoms = [20000,10000,5000,2000,1000,500,200,100,50,20,10,5]; // 200€, 100€, ..., 0,05€
+  let rest = change; const chips=[];
+  for(const d of denoms){ const n=Math.floor(rest/d); if(n>0){ chips.push(`${n} × ${fromC(d)}`); rest-=n*d; } }
+  $denomsBox.innerHTML = chips.map(c=>`<span class="chip">${c}</span>`).join('');
+});
+
+/* ====== Init ====== */
+renderTabs(); renderGrid();
+</script>
+  <script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    // 🧩 Enregistre le SW pour /caisse-bar/ uniquement
+    navigator.serviceWorker
+      .register('/caisse-bar/sw.js', { scope: '/caisse-bar/' })
+      .then(() => console.log("✅ SW caisse-bar enregistré avec scope /caisse-bar/"))
+      .catch(err => console.error("❌ Erreur SW caisse-bar", err));
+  });
+}
+</script>
+
+<!-- Pare-feu : désactive un SW racine s’il traîne encore -->
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(regs => {
+    for (const reg of regs) {
+      const scope = new URL(reg.scope).pathname;
+      // Si on est dans /caisse-bar/ et qu’un SW racine est présent → on le dégage
+      if (location.pathname.startsWith('/caisse-bar/') && scope === '/') {
+        console.log('🧹 Suppression d’un ancien SW racine parasite');
+        reg.unregister();
+      }
+    }
+  });
+}
+</script>
+  <script>
+  // Bloque le double-tap zoom iOS (sans gêner le pinch-to-zoom)
+  let lastTouch = 0;
+  document.addEventListener('touchend', (e) => {
+    const now = Date.now();
+    if (now - lastTouch <= 300) {
+      e.preventDefault();
+    }
+    lastTouch = now;
+  }, { passive: false });
+
+  // Par sécurité, empêche le double-clic souris de déclencher un zoom
+  document.addEventListener('dblclick', (e) => e.preventDefault(), { passive: false });
+</script>
+<footer style="text-align:center; font-size:12px; color:#666; margin:20px 0;">
+  © 2025 - Réalisé par [Alban DE ARAUJO]
+</footer>
+</body>
+</html>
